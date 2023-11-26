@@ -6,52 +6,49 @@ exports.handler = async (event) => {
     try {
         const productsTableName = process.env.PRODUCTS_TABLE_NAME;
         const stocksTableName = process.env.STOCKS_TABLE_NAME;
-
-        const productId = event.pathParameters.id;
         const CORSAllow = {
             'Access-Control-Allow-Origin': 'https://d2eoo74ecvbfun.cloudfront.net',
             'Access-Control-Allow-Headers': 'Content-Type',
             'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
         };
-        const productParams = {
-            TableName: productsTableName,
-            Key: {
-                id: productId,
-            },
-        };
+        const requestBody = JSON.parse(event.body);
 
-        const productResult = await dynamoDb.get(productParams).promise();
-
-        if (!productResult.Item) {
+        if (!requestBody.title || !requestBody.price || !requestBody.count) {
             return {
-                statusCode: 404,
+                statusCode: 400,
                 headers: CORSAllow,
-                body: JSON.stringify({ error: 'Product not found' }),
+                body: JSON.stringify({ error: 'Title, price, and count are required fields' }),
             };
         }
 
-        const stockParams = {
-            TableName: stocksTableName,
-            Key: {
-                product_id: productId,
+        const productId = generateUniqueId();
+
+        const productParams = {
+            TableName: productsTableName,
+            Item: {
+                id: productId,
+                title: requestBody.title,
+                description: requestBody.description || '',
+                price: requestBody.price,
             },
         };
 
-        const stockResult = await dynamoDb.get(stockParams).promise();
-        const stock = stockResult.Item || { count: 0 };
+        await dynamoDb.put(productParams).promise();
 
-        const product = {
-            id: productResult.Item.id,
-            title: productResult.Item.title,
-            description: productResult.Item.description || '',
-            price: productResult.Item.price,
-            count: stock.count,
+        const stockParams = {
+            TableName: stocksTableName,
+            Item: {
+                product_id: productId,
+                count: requestBody.count,
+            },
         };
 
+        await dynamoDb.put(stockParams).promise();
+
         return {
-            statusCode: 200,
+            statusCode: 201,
             headers: CORSAllow,
-            body: JSON.stringify(product),
+            body: JSON.stringify({ message: 'Product created successfully', productId }),
         };
     } catch (error) {
         console.error('Error:', error);
@@ -61,4 +58,12 @@ exports.handler = async (event) => {
             body: JSON.stringify({ error: 'Internal Server Error' }),
         };
     }
+};
+
+const generateUniqueId = () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = (Math.random() * 16) | 0,
+            v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
 };

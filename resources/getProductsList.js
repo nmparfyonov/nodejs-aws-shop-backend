@@ -1,73 +1,55 @@
-const handleGetRequest = async () => {
-    const products = [{
-        description: "Short Product Description1",
-        id: "7567ec4b-b10c-48c5-9345-fc73c48a80aa",
-        price: 24,
-        title: "ProductOne"
-    }, {
-        description: "Short Product Description7",
-        id: "7567ec4b-b10c-48c5-9345-fc73c48a80a1",
-        price: 15,
-        title: "ProductTitle"
-    }, {
-        description: "Short Product Description2",
-        id: "7567ec4b-b10c-48c5-9345-fc73c48a80a3",
-        price: 23,
-        title: "Product"
-    }, {
-        description: "Short Product Description4",
-        id: "7567ec4b-b10c-48c5-9345-fc73348a80a1",
-        price: 15,
-        title: "ProductTest"
-    }, {
-        description: "Short Product Descriptio1",
-        id: "7567ec4b-b10c-48c5-9445-fc73c48a80a2",
-        price: 23,
-        title: "Product2"
-    }, {
-        description: "Short Product Description7",
-        id: "7567ec4b-b10c-45c5-9345-fc73c48a80a1",
-        price: 15,
-        title: "ProductName"
-    }];
-    const objects = JSON.stringify(products);
-    return buildResponseBody(200, objects, {
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET',
-    });
-};
+const AWS = require('aws-sdk');
+const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
-const routeRequest = (lambdaEvent) => {
-    if (lambdaEvent.httpMethod === "GET" && lambdaEvent.path === "/products") {
-        return handleGetRequest();
-    }
-
-    const error = new Error(
-        `Unimplemented HTTP method: ${lambdaEvent.httpMethod}`,
-    );
-    error.name = "UnimplementedHTTPMethodError";
-    throw error;
-};
-
-const buildResponseBody = (status, body, headers = {}) => {
-    return {
-        statusCode: status,
-        headers,
-        body,
-    };
-};
-
-exports.getProductsList = async (event) => {
+exports.handler = async (event) => {
+    console.log(event);
     try {
-        return await routeRequest(event);
-    } catch (err) {
-        console.error(err);
+        const productsTableName = process.env.PRODUCTS_TABLE_NAME;
+        const stocksTableName = process.env.STOCKS_TABLE_NAME;
+        const CORSAllow = {
+            'Access-Control-Allow-Origin': 'https://d2eoo74ecvbfun.cloudfront.net',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+        };
+        const params = {
+            TableName: productsTableName,
+        };
 
-        if (err.name === "UnimplementedHTTPMethodError") {
-            return buildResponseBody(400, err.message);
-        }
+        const result = await dynamoDb.scan(params).promise();
 
-        return buildResponseBody(500, err.message || "Unknown server error");
+        const productsList = await Promise.all(
+            result.Items.map(async (product) => {
+                const stockParams = {
+                    TableName: stocksTableName,
+                    Key: {
+                        product_id: product.id,
+                    },
+                };
+
+                const stockResult = await dynamoDb.get(stockParams).promise();
+                const stock = stockResult.Item || { count: 0 };
+
+                return {
+                    id: product.id,
+                    title: product.title,
+                    description: product.description || '',
+                    price: product.price,
+                    count: stock.count,
+                };
+            })
+        );
+
+        return {
+            statusCode: 200,
+            headers: CORSAllow,
+            body: JSON.stringify(productsList),
+        };
+    } catch (error) {
+        console.error('Error:', error);
+        return {
+            statusCode: 500,
+            headers: CORSAllow,
+            body: JSON.stringify({ error: 'Internal Server Error' }),
+        };
     }
 };
