@@ -50,8 +50,10 @@ export class NodejsAwsShopBackendStack extends cdk.Stack {
       restApiName: "Shop Service",
       description: "This service serves products.",
       defaultCorsPreflightOptions: {
-        allowOrigins: ['https://d2eoo74ecvbfun.cloudfront.net/']
-      }
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: apigateway.Cors.DEFAULT_HEADERS,
+      },
     });
 
     const getProductsList = new apigateway.LambdaIntegration(getProductsListHandler, {

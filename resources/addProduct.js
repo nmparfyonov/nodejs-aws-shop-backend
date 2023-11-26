@@ -7,7 +7,7 @@ exports.handler = async (event) => {
         const productsTableName = process.env.PRODUCTS_TABLE_NAME;
         const stocksTableName = process.env.STOCKS_TABLE_NAME;
         const CORSAllow = {
-            'Access-Control-Allow-Origin': 'https://d2eoo74ecvbfun.cloudfront.net',
+            'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Headers': 'Content-Type',
             'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
         };
