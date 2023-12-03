@@ -11,6 +11,13 @@ exports.importProductsFile = async (event) => {
         };
         const fileName = event.queryStringParameters.name;
 
+        if (!fileName) {
+            return buildResponse(400, "Name is required", {});
+        }
+
+        if (!fileName.match(/\.csv$/)) {
+            return buildResponse(400, "Not CSV", {});
+        }
         const s3Key = `uploaded/${fileName}`;
 
         const signedUrl = await createSignedUrl(s3Key);
@@ -33,7 +40,7 @@ const createSignedUrl = async (s3Key) => {
     const signedUrl = await s3.getSignedUrlPromise('putObject', {
         Bucket: `${process.env.BUCKET_NAME}`,
         Key: s3Key,
-        Expires: 900,
+        Expires: 180,
     });
 
     return signedUrl;
