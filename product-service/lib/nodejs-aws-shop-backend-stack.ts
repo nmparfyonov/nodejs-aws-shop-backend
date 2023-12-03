@@ -15,7 +15,7 @@ export class NodejsAwsShopBackendStack extends cdk.Stack {
 
     const getProductsListHandler = new lambda.Function(this, "getProductsList", {
       runtime: lambda.Runtime.NODEJS_14_X,
-      code: lambda.Code.fromAsset("resources"),
+      code: lambda.Code.fromAsset("resources/getProductsList"),
       handler: "getProductsList.handler",
       role: lambdaRole,
       environment: {
@@ -26,7 +26,7 @@ export class NodejsAwsShopBackendStack extends cdk.Stack {
 
     const getProductsByIdHandler = new lambda.Function(this, "getProductsById", {
       runtime: lambda.Runtime.NODEJS_14_X,
-      code: lambda.Code.fromAsset("resources"),
+      code: lambda.Code.fromAsset("resources/getProductsById"),
       handler: "getProductsById.handler",
       role: lambdaRole,
       environment: {
@@ -37,7 +37,7 @@ export class NodejsAwsShopBackendStack extends cdk.Stack {
 
     const addProductHandler = new lambda.Function(this, "addProduct", {
       runtime: lambda.Runtime.NODEJS_14_X,
-      code: lambda.Code.fromAsset("resources"),
+      code: lambda.Code.fromAsset("resources/addProduct"),
       handler: "addProduct.handler",
       role: lambdaRole,
       environment: {
