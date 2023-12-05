@@ -3,6 +3,7 @@ const csv = require('csv-parser');
 const { PassThrough } = require('stream');
 
 const s3 = new AWS.S3();
+const sqs = new AWS.SQS();
 
 exports.importFileParser = async (event, context) => {
     try {
@@ -28,6 +29,19 @@ exports.importFileParser = async (event, context) => {
         csvStream.end(response.Body);
         const parsedRecords = await processCsvStream(csvStream);
 
+        const queueUrl = process.env.SQS_URL;
+
+        await Promise.all(
+            parsedRecords.map(async (row) => {
+                const params = {
+                    QueueUrl: queueUrl,
+                    MessageBody: JSON.stringify(row),
+                };
+
+                await sqs.sendMessage(params).promise();
+            })
+        );
+
         const newKey = key.replace('uploaded/', 'parsed/');
         await s3.copyObject({ Bucket: bucket.name, CopySource: `${bucket.name}/${key}`, Key: newKey }).promise();
         await s3.deleteObject({ Bucket: bucket.name, Key: key }).promise();
@@ -48,15 +62,12 @@ const processCsvStream = (csvStream) => {
         csvStream
             .pipe(csv())
             .on('data', (row) => {
-                console.log(`Record: ${JSON.stringify(row)}`);
                 parsedRecords.push(row);
             })
             .on('end', () => {
-                console.log('CSV processing completed.');
                 resolve(parsedRecords);
             })
             .on('error', (error) => {
-                console.error('CSV processing error:', error);
                 reject(error);
             });
     });

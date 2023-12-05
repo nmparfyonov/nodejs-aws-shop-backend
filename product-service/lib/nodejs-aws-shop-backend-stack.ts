@@ -3,15 +3,24 @@ import { Construct } from "constructs";
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as eventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 
 export class NodejsAwsShopBackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    const catalogItemsQueue = new sqs.Queue(this, 'catalogItemsQueue', {
+      queueName: "catalogItemsQueue",
+      visibilityTimeout: cdk.Duration.seconds(30),
+    });
+
     const lambdaRole = new iam.Role(this, 'LambdaRole', {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
     })
     lambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonDynamoDBFullAccess'));
+    lambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSQSFullAccess'));
+    lambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchLogsFullAccess'));
 
     const getProductsListHandler = new lambda.Function(this, "getProductsList", {
       runtime: lambda.Runtime.NODEJS_14_X,
@@ -45,6 +54,23 @@ export class NodejsAwsShopBackendStack extends cdk.Stack {
         STOCKS_TABLE_NAME: 'stock',
       },
     });
+
+    const catalogBatchProcessLambda = new lambda.Function(this, 'catalogBatchProcess', {
+      runtime: lambda.Runtime.NODEJS_14_X,
+      code: lambda.Code.fromAsset('resources/catalogBatchProcess'),
+      handler: 'catalogBatchProcess.handler',
+      role: lambdaRole,
+      environment: {
+        PRODUCTS_TABLE_NAME: 'products',
+        STOCKS_TABLE_NAME: 'stock',
+        SQS_URL: catalogItemsQueue.queueUrl,
+        REGION: this.region,
+      },
+    });
+
+    catalogBatchProcessLambda.addEventSource(new eventSources.SqsEventSource(catalogItemsQueue, {
+      batchSize: 5,
+    }));
 
     const api = new apigateway.RestApi(this, "shop-api", {
       restApiName: "Shop Service",

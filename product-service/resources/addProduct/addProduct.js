@@ -1,5 +1,6 @@
 const AWS = require('aws-sdk');
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
+const { v4: uuidv4 } = require('uuid');
 
 exports.handler = async (event) => {
     console.log(event);
@@ -21,7 +22,7 @@ exports.handler = async (event) => {
             };
         }
 
-        const productId = generateUniqueId();
+        const productId = uuidv4();
 
         const productParams = {
             TableName: productsTableName,
@@ -58,12 +59,4 @@ exports.handler = async (event) => {
             body: JSON.stringify({ error: 'Internal Server Error' }),
         };
     }
-};
-
-const generateUniqueId = () => {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        const r = (Math.random() * 16) | 0,
-            v = c === 'x' ? r : (r & 0x3) | 0x8;
-        return v.toString(16);
-    });
 };
