@@ -55,6 +55,17 @@ export class NodejsAwsShopBackendStack extends cdk.Stack {
       },
     });
 
+    const deleteProductHandler = new lambda.Function(this, "deleteProduct", {
+      runtime: lambda.Runtime.NODEJS_14_X,
+      code: lambda.Code.fromAsset("resources/deleteProduct"),
+      handler: "deleteProduct.handler",
+      role: lambdaRole,
+      environment: {
+        PRODUCTS_TABLE_NAME: 'products',
+        STOCKS_TABLE_NAME: 'stock',
+      },
+    });
+
     const catalogBatchProcessLambda = new lambda.Function(this, 'catalogBatchProcess', {
       runtime: lambda.Runtime.NODEJS_14_X,
       code: lambda.Code.fromAsset('resources/catalogBatchProcess'),
@@ -94,8 +105,13 @@ export class NodejsAwsShopBackendStack extends cdk.Stack {
       requestTemplates: { "application/json": '{ "statusCode": "200" }' }
     });
 
+    const deleteProduct = new apigateway.LambdaIntegration(deleteProductHandler, {
+      requestTemplates: { "application/json": '{ "statusCode": "200" }' },
+    });
+
     api.root.resourceForPath("products").addMethod("GET", getProductsList);
     api.root.resourceForPath("products").addMethod("POST", addProduct);
     api.root.resourceForPath("products").addResource('{id}').addMethod("GET", getProductsById);
+    api.root.resourceForPath("product").addResource('{id}').addMethod("DELETE", deleteProduct);
   }
 }
