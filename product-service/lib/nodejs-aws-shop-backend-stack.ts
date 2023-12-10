@@ -21,13 +21,13 @@ export class NodejsAwsShopBackendStack extends cdk.Stack {
       displayName: 'Create Product Topic',
     });
 
-    createProductTopic.addSubscription(new subs.EmailSubscription('email1@example.com', {
+    createProductTopic.addSubscription(new subs.EmailSubscription('nikita.maximovi4+1000@gmail.com', {
       filterPolicy: {
         totalPrice: sns.SubscriptionFilter.numericFilter({ greaterThan: 1000 }),
       },
     }));
 
-    createProductTopic.addSubscription(new subs.EmailSubscription('email2@example.com', {
+    createProductTopic.addSubscription(new subs.EmailSubscription('nikita.maximovi4+999@gmail.com', {
       filterPolicy: {
         totalPrice: sns.SubscriptionFilter.numericFilter({ lessThanOrEqualTo: 1000 }),
       },
