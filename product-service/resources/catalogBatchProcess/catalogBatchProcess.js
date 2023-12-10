@@ -1,6 +1,7 @@
 const AWS = require('aws-sdk');
 const { v4: uuidv4 } = require('uuid');
 
+const sns = new AWS.SNS();
 const dynamoDB = new AWS.DynamoDB.DocumentClient();
 
 exports.handler = async (event) => {
@@ -49,6 +50,7 @@ exports.handler = async (event) => {
         });
 
         const validRequests = requests.filter((request) => request !== null);
+        const totalPrice = validRequests.reduce((agg, request) => agg += request.productRequest.PutRequest.Item.price * request.stockRequest.PutRequest.Item.count, 0);
 
         const productRequests = validRequests.map((request) => request.productRequest);
         const stockRequests = validRequests.map((request) => request.stockRequest);
@@ -73,6 +75,27 @@ exports.handler = async (event) => {
 
         console.log('Products and stocks created in DynamoDB.');
 
+        const snsMessage = {
+            message: 'Products created successfully!',
+            subject: 'Product Creation Notification',
+            totalPrice: totalPrice,
+        };
+
+        const snsParams = {
+            Message: JSON.stringify(snsMessage),
+            Subject: snsMessage.subject,
+            TopicArn: process.env.SNS_TOPIC_ARN,
+            MessageAttributes: {
+                totalPrice: {
+                    DataType: "Number",
+                    StringValue: `${totalPrice}`,
+                }
+            }
+        };
+
+        await sns.publish(snsParams).promise();
+
+        console.log('SNS notification sent.');
         return { statusCode: 200 };
     } catch (error) {
         console.error('Error:', error);

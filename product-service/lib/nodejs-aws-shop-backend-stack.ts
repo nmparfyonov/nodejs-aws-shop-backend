@@ -5,6 +5,8 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as eventSources from 'aws-cdk-lib/aws-lambda-event-sources';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as subs from 'aws-cdk-lib/aws-sns-subscriptions';
 
 export class NodejsAwsShopBackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -14,6 +16,22 @@ export class NodejsAwsShopBackendStack extends cdk.Stack {
       queueName: "catalogItemsQueue",
       visibilityTimeout: cdk.Duration.seconds(30),
     });
+
+    const createProductTopic = new sns.Topic(this, 'CreateProductTopic', {
+      displayName: 'Create Product Topic',
+    });
+
+    createProductTopic.addSubscription(new subs.EmailSubscription('email1@example.com', {
+      filterPolicy: {
+        totalPrice: sns.SubscriptionFilter.numericFilter({ greaterThan: 1000 }),
+      },
+    }));
+
+    createProductTopic.addSubscription(new subs.EmailSubscription('email2@example.com', {
+      filterPolicy: {
+        totalPrice: sns.SubscriptionFilter.numericFilter({ lessThanOrEqualTo: 1000 }),
+      },
+    }));
 
     const lambdaRole = new iam.Role(this, 'LambdaRole', {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
@@ -76,8 +94,11 @@ export class NodejsAwsShopBackendStack extends cdk.Stack {
         STOCKS_TABLE_NAME: 'stock',
         SQS_URL: catalogItemsQueue.queueUrl,
         REGION: this.region,
+        SNS_TOPIC_ARN: createProductTopic.topicArn,
       },
     });
+
+    createProductTopic.grantPublish(catalogBatchProcessLambda);
 
     catalogBatchProcessLambda.addEventSource(new eventSources.SqsEventSource(catalogItemsQueue, {
       batchSize: 5,
