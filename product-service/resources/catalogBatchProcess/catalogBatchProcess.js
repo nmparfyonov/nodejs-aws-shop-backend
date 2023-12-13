@@ -10,7 +10,7 @@ exports.handler = async (event) => {
 
         if (!Records || Records.length === 0) {
             console.log('No records found in the SQS event.');
-            return { statusCode: 200 };
+            return { statusCode: 404 };
         }
 
         const productsTable = process.env.PRODUCTS_TABLE_NAME || 'products';
