@@ -33,9 +33,18 @@ export class ImportServiceStack extends cdk.Stack {
 
     bucket.grantReadWrite(importProductsFileLambda);
 
+    const basicAuthorizerLambda = lambda.Function.fromFunctionName(this, 'basicAuthorizer', 'basicAuthorizer')
+    const basicAuthorizer = new apigateway.RequestAuthorizer(this, "basicAPIAuthorizer", {
+      handler: basicAuthorizerLambda,
+      identitySources: [apigateway.IdentitySource.header('Authorization')]
+    })
+
     const api = new apigateway.RestApi(this, 'ImportServiceAPI', {
       restApiName: "Import Service",
       description: "This service sparses csv",
+      defaultMethodOptions: {
+        authorizer: basicAuthorizer,
+      },
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,

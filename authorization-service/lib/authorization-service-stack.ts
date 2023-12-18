@@ -1,16 +1,32 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import { ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import * as dotenv from "dotenv";
+dotenv.config()
 
 export class AuthorizationServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // The code that defines your stack goes here
+    const basicAuthorizerLambda = new lambda.Function(this, 'BasicAuthorizerLambda', {
+      runtime: lambda.Runtime.NODEJS_14_X,
+      code: lambda.Code.fromAsset('resources/basicAuthorizer'),
+      functionName: "basicAuthorizer",
+      handler: 'basicAuthorizer.handler',
+      environment: {
+        GITHUB_ACCOUNT_LOGIN: `${process.env.GITHUB_ACCOUNT_LOGIN}`,
+        TEST_PASSWORD: `${process.env.TEST_PASSWORD}`,
+      },
+    });
 
-    // example resource
-    // const queue = new sqs.Queue(this, 'AuthorizationServiceQueue', {
-    //   visibilityTimeout: cdk.Duration.seconds(300)
-    // });
+    basicAuthorizerLambda.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
+      resources: ['*'],
+    }));
+    basicAuthorizerLambda.grantInvoke({
+      grantPrincipal: new ServicePrincipal('apigateway.amazonaws.com'),
+    });
   }
 }
