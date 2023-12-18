@@ -53,5 +53,3 @@ const createSignedUrl = async (s3Key) => {
 
     return signedUrl;
 };
-
-c;
