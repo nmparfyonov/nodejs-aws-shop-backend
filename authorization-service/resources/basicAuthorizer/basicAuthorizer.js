@@ -8,6 +8,9 @@ exports.handler = async (event, ctx, cb) => {
     }
 
     const encodedCredentials = headers.Authorization.split(' ')[1];
+    if (!encodedCredentials) {
+        cb('Unauthorized');
+    }
     const decodedCredentials = Buffer.from(encodedCredentials, 'base64').toString('utf-8');
     const [username, password] = decodedCredentials.split(':');
 
