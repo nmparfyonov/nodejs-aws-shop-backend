@@ -52,6 +52,24 @@ export class ImportServiceStack extends cdk.Stack {
       },
     });
 
+    api.addGatewayResponse("4XX", {
+      type: apigateway.ResponseType.DEFAULT_4XX,
+      responseHeaders: {
+        'Access-Control-Allow-Origin': "'*'",
+        'Access-Control-Allow-Headers': "'Content-Type'",
+        'Access-Control-Allow-Methods': "'OPTIONS,POST,GET,PUT'",
+      },
+    })
+
+    api.addGatewayResponse("5XX", {
+      type: apigateway.ResponseType.DEFAULT_5XX,
+      responseHeaders: {
+        'Access-Control-Allow-Origin': "'*'",
+        'Access-Control-Allow-Headers': "'Content-Type'",
+        'Access-Control-Allow-Methods': "'OPTIONS,POST,GET,PUT'",
+      },
+    })
+
     const importProductsFileResource = api.root.addResource('import');
     const importProductsFileIntegration = new apigateway.LambdaIntegration(importProductsFileLambda);
     importProductsFileResource.addMethod('GET', importProductsFileIntegration);
