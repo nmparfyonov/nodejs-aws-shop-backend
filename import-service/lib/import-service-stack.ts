@@ -33,15 +33,42 @@ export class ImportServiceStack extends cdk.Stack {
 
     bucket.grantReadWrite(importProductsFileLambda);
 
+    const basicAuthorizerLambda = lambda.Function.fromFunctionName(this, 'basicAuthorizer', 'basicAuthorizer')
+    const basicAuthorizer = new apigateway.RequestAuthorizer(this, "basicAPIAuthorizer", {
+      handler: basicAuthorizerLambda,
+      identitySources: [apigateway.IdentitySource.header('Authorization')]
+    })
+
     const api = new apigateway.RestApi(this, 'ImportServiceAPI', {
       restApiName: "Import Service",
       description: "This service sparses csv",
+      defaultMethodOptions: {
+        authorizer: basicAuthorizer,
+      },
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
         allowHeaders: apigateway.Cors.DEFAULT_HEADERS,
       },
     });
+
+    api.addGatewayResponse("4XX", {
+      type: apigateway.ResponseType.DEFAULT_4XX,
+      responseHeaders: {
+        'Access-Control-Allow-Origin': "'*'",
+        'Access-Control-Allow-Headers': "'Content-Type'",
+        'Access-Control-Allow-Methods': "'OPTIONS,POST,GET,PUT'",
+      },
+    })
+
+    api.addGatewayResponse("5XX", {
+      type: apigateway.ResponseType.DEFAULT_5XX,
+      responseHeaders: {
+        'Access-Control-Allow-Origin': "'*'",
+        'Access-Control-Allow-Headers': "'Content-Type'",
+        'Access-Control-Allow-Methods': "'OPTIONS,POST,GET,PUT'",
+      },
+    })
 
     const importProductsFileResource = api.root.addResource('import');
     const importProductsFileIntegration = new apigateway.LambdaIntegration(importProductsFileLambda);

@@ -12,11 +12,19 @@ exports.importProductsFile = async (event) => {
         const fileName = event.queryStringParameters.name;
 
         if (!fileName) {
-            return buildResponse(400, "Name is required", {});
+            return {
+                statusCode: 400,
+                headers: CORSAllow,
+                body: JSON.stringify({ error: "Name is required" }),
+            };
         }
 
         if (!fileName.match(/\.csv$/)) {
-            return buildResponse(400, "Not CSV", {});
+            return {
+                statusCode: 400,
+                headers: CORSAllow,
+                body: JSON.stringify({ error: "Not CSV" }),
+            };
         }
         const s3Key = `uploaded/${fileName}`;
 
